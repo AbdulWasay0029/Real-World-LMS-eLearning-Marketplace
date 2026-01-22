@@ -68,6 +68,20 @@ export default function CoursesPage() {
                     <div className="flex justify-center py-20">
                         <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
                     </div>
+                ) : filteredCourses.length === 0 ? (
+                    <div className="text-center py-20 bg-white/5 rounded-2xl border border-dashed border-white/10">
+                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="w-8 h-8 text-gray-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">No courses found</h3>
+                        <p className="text-gray-400">We couldn't find any courses matching "{search}"</p>
+                        <button
+                            onClick={() => setSearch('')}
+                            className="mt-4 text-primary hover:text-accent font-semibold transition-colors"
+                        >
+                            Clear search filters
+                        </button>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredCourses.map((course) => (
@@ -94,7 +108,7 @@ export default function CoursesPage() {
                                         </div>
                                         <div className="flex items-center gap-1 text-gray-400 text-xs">
                                             <Clock className="w-3 h-3" />
-                                            12h 30m
+                                            Self-paced
                                         </div>
                                     </div>
 
@@ -120,12 +134,6 @@ export default function CoursesPage() {
                                 </div>
                             </motion.div>
                         ))}
-                    </div>
-                )}
-
-                {!loading && filteredCourses.length === 0 && (
-                    <div className="text-center py-20 text-gray-500">
-                        <p className="text-xl">No courses found matching "{search}"</p>
                     </div>
                 )}
 

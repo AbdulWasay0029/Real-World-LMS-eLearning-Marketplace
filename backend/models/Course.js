@@ -6,6 +6,8 @@ const courseSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     category: { type: String, required: true },
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // NEW: Integrity Fields
+    status: { type: String, enum: ['draft', 'published'], default: 'draft' },
     lessons: [{
         title: { type: String, required: true },
         content: { type: String, required: true },

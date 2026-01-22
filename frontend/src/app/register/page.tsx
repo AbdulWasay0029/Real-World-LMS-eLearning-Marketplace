@@ -1,20 +1,28 @@
 "use client";
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Lock, Mail, User, Loader2, AlertCircle } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { Loader2, MonitorPlay, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterPage() {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState('student');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
     const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'student'
+    });
+
+    useEffect(() => {
+        if (user) {
+            router.push('/dashboard');
+        }
+    }, [user, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,29 +30,10 @@ export default function RegisterPage() {
         setError('');
 
         try {
-            // 1. Register
-            await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`, {
-                name,
-                email,
-                password,
-                role
-            });
-
-            // 2. Auto-login
-            const res = await signIn('credentials', {
-                email,
-                password,
-                redirect: false,
-            });
-
-            if (res?.error) {
-                // Should not happen if registration worked, but fallback
-                router.push('/login');
-            } else {
-                router.push('/dashboard');
-            }
+            await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`, formData);
+            router.push('/login');
         } catch (err: any) {
-            setError(err.response?.data?.error || "Registration failed");
+            setError(err.response?.data?.error || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -57,11 +46,12 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="glass-panel w-full max-w-md p-8 rounded-2xl relative overflow-hidden"
             >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-accent/20 blur-[60px] rounded-full pointer-events-none" />
+                {/* Glow Effects */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-accent/20 hover:bg-accent/30 blur-[60px] rounded-full pointer-events-none transition-colors" />
 
                 <div className="relative z-10">
                     <h2 className="text-3xl font-bold text-center mb-2">Create Account</h2>
-                    <p className="text-gray-400 text-center mb-8">Join the learning revolution</p>
+                    <p className="text-gray-400 text-center mb-8">Join thousands of learners today</p>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
@@ -71,69 +61,57 @@ export default function RegisterPage() {
                             </div>
                         )}
 
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, role: 'student' })}
+                                className={`py-3 rounded-xl border font-medium transition-all ${formData.role === 'student' ? 'bg-primary/20 border-primary text-white' : 'border-white/10 text-gray-400 hover:bg-white/5'}`}
+                            >
+                                Student
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, role: 'instructor' })}
+                                className={`py-3 rounded-xl border font-medium transition-all ${formData.role === 'instructor' ? 'bg-accent/20 border-accent text-white' : 'border-white/10 text-gray-400 hover:bg-white/5'}`}
+                            >
+                                Instructor
+                            </button>
+                        </div>
+
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Full Name</label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-primary/50 transition-colors"
-                                    placeholder="John Doe"
-                                    required
-                                />
-                            </div>
+                            <label className="text-sm font-medium text-gray-300">Name</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                placeholder="John Doe"
+                            />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Email</label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-primary/50 transition-colors"
-                                    placeholder="you@example.com"
-                                    required
-                                />
-                            </div>
+                            <input
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                placeholder="you@example.com"
+                            />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-primary/50 transition-colors"
-                                    placeholder="At least 6 characters"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">I want to be a</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setRole('student')}
-                                    className={`py-3 rounded-lg border transition-all ${role === 'student' ? 'bg-primary/20 border-primary text-white' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5'}`}
-                                >
-                                    Student
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setRole('instructor')}
-                                    className={`py-3 rounded-lg border transition-all ${role === 'instructor' ? 'bg-primary/20 border-primary text-white' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5'}`}
-                                >
-                                    Instructor
-                                </button>
-                            </div>
+                            <input
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                placeholder="Must be at least 6 characters"
+                            />
                         </div>
 
                         <button
@@ -141,16 +119,9 @@ export default function RegisterPage() {
                             disabled={loading}
                             className="w-full bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 mt-6"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Account"}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign Up"}
                         </button>
                     </form>
-
-                    <div className="mt-6 text-center text-sm text-gray-400">
-                        Already have an account?{' '}
-                        <Link href="/login" className="text-primary hover:text-accent font-medium transition-colors">
-                            Sign in
-                        </Link>
-                    </div>
                 </div>
             </motion.div>
         </div>
