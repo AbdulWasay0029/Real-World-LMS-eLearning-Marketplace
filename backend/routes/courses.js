@@ -6,7 +6,7 @@ const authMiddleware = require('../middleware/auth');
 const auth = authMiddleware.auth || authMiddleware;
 const optionalAuth = authMiddleware.optionalAuth;
 
-const { createCourse, getCourses, getCourseById, enrollCourse, getMyEnrollments, getMyCreatedCourses, updateCourse, deleteCourse } = require('../controllers/courses');
+const { createCourse, getCourses, getCourseById, enrollCourse, getMyEnrollments, getMyCreatedCourses, updateCourse, deleteCourse, toggleLessonComplete, addReview } = require('../controllers/courses');
 
 router.post('/', auth, createCourse);
 router.get('/', getCourses);
@@ -20,5 +20,9 @@ router.get('/:id', optionalAuth, getCourseById);
 router.post('/:id/enroll', auth, enrollCourse);
 router.put('/:id', auth, updateCourse);
 router.delete('/:id', auth, deleteCourse);
+
+// NEW: Progress & Review Routes
+router.post('/progress/toggle', auth, toggleLessonComplete);
+router.post('/:id/reviews', auth, addReview);
 
 module.exports = router;

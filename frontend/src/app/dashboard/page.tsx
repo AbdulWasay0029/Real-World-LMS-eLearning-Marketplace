@@ -13,6 +13,7 @@ interface Course {
     category: string;
     studentCount?: number;
     lessons: any[];
+    progressPercentage?: number; // New field
 }
 
 export default function Dashboard() {
@@ -41,11 +42,6 @@ export default function Dashboard() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setCourses(res.data);
-            setStats({
-                earnings: 0,
-                students: res.data.length,
-                views: res.data.length * 12 // Mock engagement metric
-            });
         } catch (error) {
             console.error("Failed to fetch enrollments", error);
         } finally {
@@ -149,103 +145,32 @@ export default function Dashboard() {
                             )}
                         </div>
 
-                        {/* Overview Tab */}
-                        {activeTab === 'overview' && (
-                            <div className="space-y-8">
-                                {/* Stats Row */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {isInstructor ? (
-                                        <>
-                                            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                                    <DollarSign className="w-24 h-24" />
-                                                </div>
-                                                <h3 className="text-gray-400 text-sm font-medium mb-1">Total Earnings</h3>
-                                                <p className="text-3xl font-bold text-white">${stats.earnings.toFixed(2)}</p>
-                                            </div>
-                                            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                                    <Users className="w-24 h-24" />
-                                                </div>
-                                                <h3 className="text-gray-400 text-sm font-medium mb-1">Total Enrollments</h3>
-                                                <p className="text-3xl font-bold text-white">{stats.students}</p>
-                                            </div>
-                                            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                                    <BarChart3 className="w-24 h-24" />
-                                                </div>
-                                                <h3 className="text-gray-400 text-sm font-medium mb-1">Course Views</h3>
-                                                <p className="text-3xl font-bold text-white">{stats.views}</p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                                    <BookOpen className="w-24 h-24" />
-                                                </div>
-                                                <h3 className="text-gray-400 text-sm font-medium mb-1">Enrolled Courses</h3>
-                                                <p className="text-3xl font-bold text-white">{courses.length}</p>
-                                            </div>
-                                            <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                                    <MonitorPlay className="w-24 h-24" />
-                                                </div>
-                                                <h3 className="text-gray-400 text-sm font-medium mb-1">Active Learning</h3>
-                                                <p className="text-3xl font-bold text-white">{courses.length}</p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                {/* Recent Activity */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-xl font-bold flex items-center gap-2">
-                                            <TrendingUp className="w-5 h-5 text-primary" />
-                                            Recent Activity
-                                        </h2>
-                                        <button onClick={() => setActiveTab('courses')} className="text-sm text-primary hover:text-accent">View All</button>
+                        {/* Stats Grid (Instructor Only) */}
+                        {isInstructor && activeTab === 'overview' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <DollarSign className="w-24 h-24" />
                                     </div>
-
-                                    {fetchLoading ? (
-                                        <div className="text-center py-10 opacity-50">Loading...</div>
-                                    ) : courses.length > 0 ? (
-                                        <div className="grid grid-cols-1 gap-4">
-                                            {courses.slice(0, 3).map(course => (
-                                                <Link href={`/courses/${course._id}`} key={course._id}>
-                                                    <div className="glass-panel rounded-xl p-4 flex gap-4 hover:bg-white/5 transition-colors cursor-pointer group items-center">
-                                                        <div className="w-16 h-16 bg-gray-800 rounded-lg flex-shrink-0 flex items-center justify-center">
-                                                            <MonitorPlay className="text-gray-600 group-hover:text-primary transition-colors" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{course.title}</h3>
-                                                            <div className="flex items-center gap-4 text-xs text-gray-400">
-                                                                <span className="bg-white/10 px-2 py-0.5 rounded text-gray-300">{course.category}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="pr-4">
-                                                            <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-12 text-gray-500 glass-panel rounded-xl">
-                                            <p>No activity yet.</p>
-                                        </div>
-                                    )}
+                                    <h3 className="text-gray-400 text-sm font-medium mb-1">Estimated Earnings</h3>
+                                    <p className="text-3xl font-bold text-white">${stats.earnings.toFixed(2)}</p>
+                                </div>
+                                <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <Users className="w-24 h-24" />
+                                    </div>
+                                    <h3 className="text-gray-400 text-sm font-medium mb-1">Total Enrollments</h3>
+                                    <p className="text-3xl font-bold text-white">{stats.students}</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* Courses Tab */}
-                        {activeTab === 'courses' && (
+                        {/* Courses View */}
+                        {(activeTab === 'overview' || activeTab === 'courses') && (
                             <div>
                                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                                     <MonitorPlay className="w-5 h-5 text-primary" />
-                                    {isInstructor ? 'All Published Courses' : 'All Enrollments'}
+                                    {isInstructor ? 'Your Published Courses' : 'Enrolled Courses'}
                                 </h2>
 
                                 {fetchLoading ? (
@@ -278,15 +203,25 @@ export default function Dashboard() {
                                         {courses.map(course => (
                                             <Link href={`/courses/${course._id}`} key={course._id}>
                                                 <div className="glass-panel rounded-xl p-4 flex gap-4 hover:bg-white/5 transition-colors cursor-pointer group items-center">
-                                                    <div className="w-20 h-20 bg-gray-800 rounded-lg flex-shrink-0 flex items-center justify-center">
-                                                        <MonitorPlay className="text-gray-600 group-hover:text-primary transition-colors" />
+                                                    <div className="w-20 h-20 bg-gray-800 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden relative">
+                                                        <MonitorPlay className="text-gray-600 group-hover:text-primary transition-colors z-10" />
+                                                        {/* Progress Overlay for Students */}
+                                                        {!isInstructor && course.progressPercentage !== undefined && (
+                                                            <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-700">
+                                                                <div className="h-full bg-green-500" style={{ width: `${course.progressPercentage}%` }}></div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1">
                                                         <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{course.title}</h3>
                                                         <div className="flex items-center gap-4 text-xs text-gray-400">
                                                             <span className="bg-white/10 px-2 py-0.5 rounded text-gray-300">{course.category}</span>
                                                             {isInstructor && <span>{course.studentCount} Students</span>}
-                                                            {!isInstructor && <span>Ready to watch</span>}
+                                                            {!isInstructor && (
+                                                                <span className="flex items-center gap-1">
+                                                                    {course.progressPercentage === 100 ? <span className="text-green-400">Completed</span> : `${course.progressPercentage}% Complete`}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="pr-4">
@@ -297,51 +232,6 @@ export default function Dashboard() {
                                         ))}
                                     </div>
                                 )}
-                            </div>
-                        )}
-
-                        {/* Analytics Tab (Instructor Only) */}
-                        {isInstructor && activeTab === 'analytics' && (
-                            <div className="space-y-6">
-                                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5 text-primary" />
-                                    Performance Analytics
-                                </h2>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="glass-panel p-6 rounded-2xl">
-                                        <h3 className="text-lg font-bold mb-6 text-gray-300">Earnings Breakdown</h3>
-                                        <div className="h-48 flex items-end justify-between px-4 gap-2">
-                                            {[35, 60, 45, 80, 55, 90, 70].map((h, i) => (
-                                                <div key={i} className="w-full bg-primary/20 hover:bg-primary/40 transition-colors rounded-t-sm relative group">
-                                                    <div style={{ height: `${h}%` }} className="absolute bottom-0 w-full bg-gradient-to-t from-primary/50 to-primary rounded-t-sm"></div>
-                                                    <div className="absolute -top-8 w-full text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">${h * 10}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-between text-xs text-gray-500 mt-4">
-                                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="glass-panel p-6 rounded-2xl">
-                                        <h3 className="text-lg font-bold mb-6 text-gray-300">Student Engagement</h3>
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg">
-                                                <span className="text-gray-400">Course Views</span>
-                                                <span className="font-bold text-white">{stats.views}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg">
-                                                <span className="text-gray-400">Course Completions (Est)</span>
-                                                <span className="font-bold text-white">{Math.floor(stats.students * 0.4)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg">
-                                                <span className="text-gray-400">Avg. Rating</span>
-                                                <span className="font-bold text-yellow-400">4.8/5.0</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         )}
 

@@ -60,10 +60,12 @@ exports.getCourseById = async (req, res) => {
             return res.status(404).json({ error: 'Course not found' });
         }
 
-        // AUTH CHECK logic simplified by optionalAuth
         let isAuthorized = false;
         let isOwner = false;
-        const user = req.user; // Populated by optionalAuth if token exists
+        const user = req.user;
+
+        // NEW: Inject progress if user is loaded
+        let userProgress = [];
 
         if (user) {
             if (course.instructor._id.toString() === user._id.toString()) {
@@ -71,6 +73,11 @@ exports.getCourseById = async (req, res) => {
                 isOwner = true;
             } else if (user.purchasedCourses.includes(course._id)) {
                 isAuthorized = true;
+                // Find progress
+                const progressRecord = user.courseProgress.find(p => p.course.toString() === course._id.toString());
+                if (progressRecord) {
+                    userProgress = progressRecord.completedLessons;
+                }
             } else if (user.role === 'admin') {
                 isAuthorized = true;
                 isOwner = true;
@@ -82,7 +89,7 @@ exports.getCourseById = async (req, res) => {
         }
 
         if (isAuthorized) {
-            res.json(course);
+            res.json({ ...course.toObject(), userProgress });
         } else {
             const publicCourse = {
                 _id: course._id,
@@ -107,11 +114,28 @@ exports.getCourseById = async (req, res) => {
 
 exports.getMyEnrollments = async (req, res) => {
     try {
+        // Populate purchased courses
+        // We also need to Calculate Process % for each course manually here
         const user = await User.findById(req.user._id).populate({
             path: 'purchasedCourses',
             populate: { path: 'instructor', select: 'name' }
         });
-        res.json(user.purchasedCourses);
+
+        // Map courses to add 'progress' field
+        const enrollments = user.purchasedCourses.map(course => {
+            const progressRecord = user.courseProgress.find(p => p.course.toString() === course._id.toString());
+            const completedCount = progressRecord ? progressRecord.completedLessons.length : 0;
+            const totalLessons = course.lessons.length;
+            const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+            return {
+                ...course.toObject(),
+                progressPercentage,
+                completedLessons: progressRecord ? progressRecord.completedLessons : []
+            };
+        });
+
+        res.json(enrollments);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -159,6 +183,9 @@ exports.enrollCourse = async (req, res) => {
         }
 
         user.purchasedCourses.push(courseId);
+        // Initialize empty progress
+        user.courseProgress.push({ course: courseId, completedLessons: [] });
+
         await user.save();
 
         res.status(200).json({ message: 'Enrolled successfully', courseId });
@@ -206,6 +233,85 @@ exports.deleteCourse = async (req, res) => {
 
         await Course.findByIdAndDelete(req.params.id);
         res.json({ message: 'Course deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// NEW: Toggle Lesson Completion
+exports.toggleLessonComplete = async (req, res) => {
+    try {
+        const { courseId, lessonId } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user.purchasedCourses.includes(courseId)) {
+            return res.status(403).json({ error: 'Not enrolled in this course' });
+        }
+
+        // Find the progress record
+        let progressIndex = user.courseProgress.findIndex(p => p.course.toString() === courseId);
+
+        if (progressIndex === -1) {
+            // Should not happen if enrolled correctly, but handle migration case
+            user.courseProgress.push({ course: courseId, completedLessons: [] });
+            progressIndex = user.courseProgress.length - 1;
+        }
+
+        const completedLessons = user.courseProgress[progressIndex].completedLessons;
+        const isCompleted = completedLessons.includes(lessonId);
+
+        if (isCompleted) {
+            // Remove it (Undo complete)
+            user.courseProgress[progressIndex].completedLessons = completedLessons.filter(id => id !== lessonId);
+        } else {
+            // Add it
+            user.courseProgress[progressIndex].completedLessons.push(lessonId);
+        }
+
+        await user.save();
+        res.json({
+            completedLessons: user.courseProgress[progressIndex].completedLessons,
+            isCompleted: !isCompleted
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// NEW: Add Course Review
+exports.addReview = async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const course = await Course.findById(req.params.id);
+
+        if (!course) return res.status(404).json({ error: 'Course not found' });
+
+        // Check if user is enrolled
+        const user = await User.findById(req.user._id);
+        if (!user.purchasedCourses.includes(req.params.id)) {
+            return res.status(403).json({ error: 'Must be enrolled to leave a review' });
+        }
+
+        // Check if already reviewed
+        const alreadyReviewed = course.reviews.find(r => r.user.toString() === req.user._id.toString());
+        if (alreadyReviewed) {
+            return res.status(400).json({ error: 'You have already reviewed this course' });
+        }
+
+        course.reviews.push({
+            user: req.user._id,
+            rating,
+            comment
+        });
+
+        // Recalculate Average Rating
+        const total = course.reviews.reduce((acc, item) => item.rating + acc, 0);
+        course.rating = total / course.reviews.length;
+
+        await course.save();
+        res.status(201).json({ message: 'Review added' });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
